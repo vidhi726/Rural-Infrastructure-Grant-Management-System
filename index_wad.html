@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rural Grant Portal</title>
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style_wad.css" />
+</head>
+
+<body>
+
+  <!-- Grain overlay -->
+  <div class="grain"></div>
+
+  <!-- HEADER -->
+  <header class="site-header">
+
+    <!-- NAVIGATION -->
+    <nav class="nav">
+      <a href="#" class="brand">Rural Grant Portal</a>
+
+      <div class="nav-links">
+        <a href="#home">Home</a>
+        <a href="#about">About</a>
+        <a href="#works">How it Works</a>
+        <a href="#contact">Contact</a>
+      </div>
+
+      <a href="#loginModal" class="nav-btn">Login</a>
+    </nav>
+  </header>
+
+
+  <!-- MAIN CONTENT -->
+  <main class="site-main" id="home">
+
+    <!--  ARTICLE -->
+    <article class="hero-article">
+
+      <!-- HERO SECTION -->
+      <section class="hero">
+
+        <div class="hero-main">
+
+          <!-- Left Panel -->
+          <section class="hero-left" aria-label="Hero Introduction">
+            <div class="hero-content">
+
+              <div class="hero-label">
+                <span class="line"></span>
+                <span class="label-text">RURAL DEVELOPMENT PORTAL</span>
+              </div>
+
+              <h1 class="hero-title">
+                The Power <br />
+                <span class="hero-italic">of</span> Infrastructure
+              </h1>
+
+              <p class="hero-sub">
+                Empowering Gram Panchayats with transparent <br>
+                grant management. Streamline applications, <br>
+                accelerate approvals, and track every rupee <br>
+                invested in our future.
+              </p>
+
+              <div class="hero-buttons">
+                <!-- hyperlink button -->
+                <a href="#loginModal" class="btn btn-primary">Access Portal</a>
+
+                <!-- hyperlink button -->
+                <a href="#" class="btn btn-outline">Public Dashboard</a>
+              </div>
+
+            </div>
+          </section>
+
+
+          <!-- Right Panel -->
+          <section class="hero-right" aria-label="Hero Image Panel">
+            <div class="hero-image" role="img" aria-label="Rural development image"></div>
+
+            <!-- ASIDE  -->
+            <aside class="floating-card" aria-label="Latest Project Sidebar">
+              <div class="card-top">
+                <div>
+                  <p class="small">LATEST PROJECT</p>
+                  <h3 class="card-title">Village Road Phase II</h3>
+                </div>
+                <div class="badge">↑</div>
+              </div>
+
+              <div class="progress-bg">
+                <div class="progress-fill"></div>
+              </div>
+
+              <div class="progress-info">
+                <span>Progress</span>
+                <span>75%</span>
+              </div>
+            </aside>
+
+          </section>
+
+        </div>
+
+        <!-- TICKER SECTION -->
+        <section class="ticker" aria-label="Sustainability Ticker">
+          <div class="ticker-track">
+            <span class="ticker-item">🌿 BUILDING SUSTAINABLE COMMUNITIES</span>
+            <span class="ticker-item">🌿 BUILDING SUSTAINABLE COMMUNITIES</span>
+            <span class="ticker-item">🌿 BUILDING SUSTAINABLE COMMUNITIES</span>
+            <span class="ticker-item">🌿 BUILDING SUSTAINABLE COMMUNITIES</span>
+            <span class="ticker-item">🌿 BUILDING SUSTAINABLE COMMUNITIES</span>
+            <span class="ticker-item">🌿 BUILDING SUSTAINABLE COMMUNITIES</span>
+          </div>
+        </section>
+
+      </section>
+
+    </article>
+  </main>
+
+
+  <!-- FOOTER -->
+  <footer class="footer" id="contact">
+    <div class="footer-grid">
+
+      <div>
+        <h3>Rural Grant Portal</h3>
+        <p>
+          A comprehensive digital solution for transparent, efficient,
+          and accountable rural infrastructure development.
+        </p>
+      </div>
+
+      <div>
+        <h4>Platform</h4>
+        <a href="#loginModal">Login</a>
+        <a href="#">Public Dashboard</a>
+        <a href="#">All Projects</a>
+      </div>
+
+      <div>
+        <h4>Support</h4>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Service</a>
+        <p class="support">Support: help@ruralgrants.gov.in</p>
+      </div>
+
+    </div>
+
+    <div class="footer-bottom">
+      <p>© 2026 Rural Infrastructure Development Grant Management System.</p>
+      <div class="social">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </footer>
+
+
+  <!-- LOGIN MODAL -->
+  <section id="loginModal" class="modal">
+
+    <!-- click outside closes modal -->
+    <a href="#" class="modal-overlay" aria-label="Close"></a>
+
+    <article class="modal-box" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+
+      <header class="modal-head">
+        <h2 id="loginTitle">Login</h2>
+        <a href="#" class="modal-close" aria-label="Close">✕</a>
+      </header>
+
+      <p class="modal-subtitle">
+        Access your dashboard securely and manage rural grants.
+      </p>
+
+      <!-- FORM -->
+      <form class="login-form">
+        <section class="form-field">
+          <label for="email">Email</label>
+          <input id="email" type="email" placeholder="Enter email" required />
+        </section>
+
+        <section class="form-field">
+          <label for="password">Password</label>
+          <input id="password" type="password" placeholder="Enter password" required />
+        </section>
+
+        <button type="submit" class="btn btn-primary modal-btn">Login</button>
+
+        <section class="form-extra">
+          <a href="#" class="mini-link">Forgot Password?</a>
+          <a href="#" class="mini-link">Create Account</a>
+        </section>
+      </form>
+
+    </article>
+  </section>
+
+</body>
+</html>
