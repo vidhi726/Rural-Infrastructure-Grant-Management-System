@@ -1,0 +1,149 @@
+@import "tailwindcss";
+
+/* 
+  Temporarily commented out custom styles to debug Tailwind loading.
+  If layout fixes, we will re-enable these progressively.
+*/
+
+:root {
+  /* Modern Dashboard Palette - Inspired by reference images */
+  --bg-main: #f0f4f8;
+  --bg-gradient: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+  --sidebar-bg: #1e293b;
+  --sidebar-active: rgba(255, 255, 255, 0.1);
+  --sidebar-text: #94a3b8;
+  --sidebar-text-active: #ffffff;
+
+  --card-bg: rgba(255, 255, 255, 0.8);
+  --card-border: rgba(255, 255, 255, 0.5);
+  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+
+  --accent-primary: #0ea5e9;
+  --accent-secondary: #10b981;
+  --accent-glow: rgba(14, 165, 233, 0.3);
+
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --text-inverse: #ffffff;
+
+  /* Legacy variables kept for compatibility where needed, but updated to new palette */
+  --deep-navy: #1e293b;
+  --navy-900: #0f172a;
+  --navy-800: #1e293b;
+  --navy-700: #334155;
+  --navy-600: #0ea5e9;
+  --trust-blue: #0284c7;
+  --trust-blue-light: #0ea5e9;
+  --trust-blue-glow: rgba(14, 165, 233, 0.5);
+  --growth-green: #059669;
+  --growth-green-light: #10b981;
+  --growth-green-glow: rgba(16, 185, 129, 0.5);
+  --warm-amber: #d97706;
+  --warm-amber-light: #f59e0b;
+  --warm-amber-glow: rgba(245, 158, 11, 0.5);
+  --success: #10b981;
+  --warning: #f59e0b;
+  --error: #ef4444;
+  --info: #0ea5e9;
+  --white: #ffffff;
+  --gray-100: #f1f5f9;
+  --gray-200: #e2e8f0;
+  --gray-300: #cbd5e1;
+  --gray-400: #94a3b8;
+  --gray-500: #64748b;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-2xl: 2rem;
+  --radius-full: 9999px;
+
+  /* Transition for theme switching */
+  --transition-theme: background 300ms ease, color 300ms ease, border-color 300ms ease, box-shadow 300ms ease;
+}
+
+.dark {
+  --bg-main: #1b2118;
+  --bg-gradient: linear-gradient(135deg, #1b2118 0%, #2d3626 100%);
+  --sidebar-bg: #151a12;
+  --sidebar-active: rgba(163, 181, 147, 0.1);
+  --sidebar-text: #8c9b83;
+  --sidebar-text-active: #ffffff;
+
+  --card-bg: rgba(45, 54, 38, 0.7);
+  --card-border: rgba(163, 181, 147, 0.1);
+  --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+
+  --accent-primary: #a3b593;
+  /* Muted Sage/Olive Accent */
+  --accent-secondary: #829474;
+  --accent-glow: rgba(163, 181, 147, 0.2);
+
+  --text-main: #e8ede4;
+  --text-muted: #8c9b83;
+  --text-inverse: #1b2118;
+
+  --gray-100: #2d3626;
+  --gray-200: #3d4a34;
+
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg-main);
+  background-attachment: fixed;
+  color: var(--text-main);
+  min-height: 100vh;
+  font-family: var(--font-inter);
+  transition: var(--transition-theme);
+}
+
+@layer utilities {
+  .glass-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--card-shadow);
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .bg-grid {
+    background-image: radial-gradient(circle at 2px 2px, rgba(0, 0, 0, 0.05) 1px, transparent 0);
+    background-size: 32px 32px;
+  }
+}
+
+@layer components {
+  .input-field {
+    width: 100%;
+    background-color: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-lg);
+    padding: 0.75rem 1rem;
+    color: var(--text-main);
+    transition: all 0.2s ease;
+  }
+
+  .input-field:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 4px var(--accent-glow);
+  }
+
+  select.input-field {
+    cursor: pointer;
+  }
+
+  select.input-field option {
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    padding: 10px;
+  }
+}
