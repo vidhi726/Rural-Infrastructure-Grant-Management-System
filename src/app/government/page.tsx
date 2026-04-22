@@ -20,7 +20,7 @@ import {
     ExternalLink,
     History
 } from 'lucide-react'
-import { getGovernmentApplications, updateApplicationStatus, getApplicationDocuments, verifyDocument, getGovernmentComplaints, getMilestones, addMilestone } from '@/lib/db/actions'
+import { getGovernmentApplications, updateApplicationStatus, getApplicationDocuments, verifyDocument, getGovernmentComplaints, getMilestones, addMilestone, replyToComplaint } from '@/lib/db/actions'
 // Removed Supabase import
 import AppLayout from '@/components/layout/AppLayout'
 import DynamicMilestones from '@/components/ui/DynamicMilestones'
@@ -56,6 +56,9 @@ export default function GovernmentDashboard() {
         district: '...',
         stateId: ''
     })
+    const [selectedComplaint, setSelectedComplaint] = useState<any>(null)
+    const [showReplyModal, setShowReplyModal] = useState(false)
+    const [govtReply, setGovtReply] = useState('')
 
     const categoryColors: Record<string, string> = {
         roads: '#f59e0b',
@@ -71,14 +74,14 @@ export default function GovernmentDashboard() {
             const response = await fetch('/api/auth/me')
             const { user } = await response.json()
             if (user) {
-                const profile = await getUserProfile(user.id)
+                const profile = await getUserProfile(user._id || user.id)
 
                 if (profile) {
                     setOfficerData({
                         name: profile.full_name,
                         designation: profile.role.replace('_', ' '),
-                        district: profile.villages?.districts?.name || 'Pune',
-                        stateId: profile.state_id || ''
+                        district: profile.districts?.name || profile.district?.name || 'Pune',
+                                                stateId: typeof profile.state_id === 'object' ? profile.state_id._id : (profile.state_id || '')
                     })
                 }
             } else {
@@ -124,7 +127,7 @@ export default function GovernmentDashboard() {
                         title: a.title,
                         description: a.description,
                         village: a.villages?.name || 'Unknown',
-                        district: a.villages?.districts?.name || 'Unknown',
+                        district: a.districts?.name || a.villages?.districts?.name || 'Unknown',
                         scheme: a.grant_schemes?.name || 'Unknown',
                         category: a.grant_schemes?.category || 'roads',
                         requestedAmount: a.requested_amount,
@@ -155,7 +158,9 @@ export default function GovernmentDashboard() {
                     village: c.villages?.name,
                     district: c.villages?.districts?.name,
                     status: c.status,
-                    date: c.created_at
+                    date: c.created_at,
+                    response: c.government_response,
+                    respondedAt: c.responded_at
                 })))
                 setActiveProjects(approved.filter((a: any) => a.status === 'in_progress').map(mapApp))
             } catch (err) {
@@ -282,12 +287,28 @@ export default function GovernmentDashboard() {
         }
     }
 
+    const handleReplyToComplaint = async () => {
+        if (!selectedComplaint || !govtReply) return;
+        try {
+            await replyToComplaint(selectedComplaint.id, govtReply);
+            setGovtReply('');
+            setShowReplyModal(false);
+            setFetchTrigger(prev => prev + 1);
+        } catch (err) {
+            console.error('Reply complaint error:', err);
+            alert('Failed to send reply');
+        }
+    };
+
+
+    const openComplaintsCount = complaints.filter(c => c.status === 'open').length
+    const totalPendingActions = pendingApplications.length + openComplaintsCount
 
     const tabs = [
         { id: 'pending', label: 'Pending Review', icon: Clock, count: pendingApplications.length },
         { id: 'approved', label: 'Approved', icon: ThumbsUp },
         { id: 'rejected', label: 'Rejected', icon: ThumbsDown },
-        { id: 'complaints', label: 'Complaints', icon: FileText, count: complaints.length },
+        { id: 'complaints', label: 'Complaints', icon: FileText, count: openComplaintsCount },
         { id: 'fund', label: 'Fund Releases', icon: DollarSign }
     ]
 
@@ -323,8 +344,16 @@ export default function GovernmentDashboard() {
                             </div>
 
                             <div className="flex items-center gap-4">
-                                <div className="text-center p-4 rounded-xl bg-red-500/10 border border-red-500/20">
-                                    <div className="text-2xl font-bold text-red-400">{pendingApplications.length}</div>
+                                <div className={`text-center p-4 rounded-xl border transition-all duration-500 ${
+                                    totalPendingActions > 0 
+                                        ? 'bg-red-500/10 border-red-500/20' 
+                                        : 'bg-black/5 dark:bg-white/5 border-[var(--card-border)]'
+                                }`}>
+                                    <div className={`text-2xl font-bold transition-colors ${
+                                        totalPendingActions > 0 ? 'text-red-400' : 'text-[var(--text-muted)]'
+                                    }`}>
+                                        {totalPendingActions}
+                                    </div>
                                     <div className="text-xs text-gray-400">Pending Actions</div>
                                 </div>
                             </div>
@@ -395,7 +424,7 @@ export default function GovernmentDashboard() {
                                             </div>
                                         </div>
                                         <p className="text-[var(--text-muted)] mb-6 text-sm md:text-base leading-relaxed">{complaint.description}</p>
-                                        <div className="pt-6 border-t border-[var(--card-border)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                         <div className="pt-6 border-t border-[var(--card-border)] flex flex-col md:flex-row md:items-center justify-between gap-4">
                                             <div className="flex flex-wrap items-center gap-6">
                                                 <div className="flex items-center gap-2">
                                                     <div className="w-9 h-9 rounded-full bg-blue-500/20 flex items-center justify-center">
@@ -416,9 +445,24 @@ export default function GovernmentDashboard() {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="flex gap-2">
-                                                <Button size="sm" variant="secondary">Contact Citizen</Button>
-                                                <Button size="sm" variant="primary">Mark as Resolved</Button>
+                                            
+                                            <div className="flex flex-1 gap-2 md:justify-end">
+                                                {complaint.response ? (
+                                                    <div className="flex-1 max-w-md bg-green-500/5 border border-green-500/10 p-3 rounded-lg text-left">
+                                                        <div className="text-xs font-bold text-green-500 mb-1 uppercase tracking-wider">Your Official Response:</div>
+                                                        <p className="text-sm italic text-[var(--text-main)] opacity-90">"{complaint.response}"</p>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <Button size="sm" variant="secondary" onClick={() => {
+                                                            window.location.href = `mailto:${complaint.email}`;
+                                                        }}>Contact Citizen</Button>
+                                                        <Button size="sm" variant="primary" onClick={() => {
+                                                            setSelectedComplaint(complaint);
+                                                            setShowReplyModal(true);
+                                                        }}>Reply & Resolve</Button>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
                                     </GlassCard>
@@ -1080,6 +1124,73 @@ export default function GovernmentDashboard() {
                                         >
                                             Reject Document
                                         </Button>
+                                    </div>
+                                </GlassCard>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+                {/* Reply to Complaint Modal */}
+                <AnimatePresence>
+                    {showReplyModal && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                            onClick={() => setShowReplyModal(false)}
+                        >
+                            <motion.div
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.9, opacity: 0 }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-full max-w-lg"
+                            >
+                                <GlassCard className="p-6">
+                                    <div className="flex justify-between items-center mb-6">
+                                        <h3 className="text-xl font-bold text-[var(--text-main)]">Reply to Complaint</h3>
+                                        <button onClick={() => setShowReplyModal(false)} className="text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors">
+                                            <XCircle className="w-6 h-6" />
+                                        </button>
+                                    </div>
+
+                                    <div className="mb-6 space-y-2">
+                                        <div className="text-sm font-semibold text-[var(--text-main)]">Complaint: {selectedComplaint?.title}</div>
+                                        <p className="text-xs text-[var(--text-muted)] line-clamp-3 italic opacity-80">
+                                            "{selectedComplaint?.description}"
+                                        </p>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-[var(--text-muted)] mb-2 text-left">Your Response</label>
+                                            <textarea
+                                                className="w-full h-32 px-4 py-3 bg-black/10 dark:bg-white/5 border border-[var(--card-border)] rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500/50 resize-none"
+                                                placeholder="Type your official response here..."
+                                                value={govtReply}
+                                                onChange={(e) => setGovtReply(e.target.value)}
+                                            />
+                                        </div>
+
+                                        <div className="flex gap-4">
+                                            <Button
+                                                className="flex-1"
+                                                variant="secondary"
+                                                onClick={() => setShowReplyModal(false)}
+                                            >
+                                                Cancel
+                                            </Button>
+                                            <Button
+                                                className="flex-1"
+                                                variant="primary"
+                                                icon={<Send className="w-4 h-4" />}
+                                                onClick={handleReplyToComplaint}
+                                                disabled={!govtReply}
+                                            >
+                                                Send Reply
+                                            </Button>
+                                        </div>
                                     </div>
                                 </GlassCard>
                             </motion.div>

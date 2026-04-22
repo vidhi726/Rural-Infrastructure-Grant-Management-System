@@ -182,14 +182,28 @@ export async function getCitizenApplications(stateId?: string, villageId?: strin
 }
 
 
-export async function getCitizenComplaints(stateId?: string) {
+export async function getCitizenComplaints(stateId?: string, userId?: string) {
     await connectToDatabase();
-    let comps = await Complaint.find().sort({ createdAt: -1 })
+    console.log(`[DEBUG] getCitizenComplaints called with stateId: "${stateId}", userId: "${userId}"`);
+    
+    let query: any = {};
+    if (userId && userId !== 'undefined') {
+        query.submitted_by = userId;
+    }
+
+    let comps = await Complaint.find(query).sort({ createdAt: -1 })
         .populate({ path: 'village_id', populate: { path: 'district_id' } })
         .lean() as any[];
 
-    if (stateId) {
-        comps = comps.filter(c => String((c.village_id as any)?.district_id?.state_id) === stateId);
+    console.log(`[DEBUG] Found ${comps.length} complaints for query:`, query);
+
+    if (stateId && stateId !== '' && stateId !== 'undefined') {
+        const initialCount = comps.length;
+        comps = comps.filter(c => {
+            const compStateId = String((c.village_id as any)?.district_id?.state_id || (c.village_id as any)?.state_id || '');
+            return compStateId === String(stateId);
+        });
+        console.log(`[DEBUG] Filtered from ${initialCount} to ${comps.length} complaints for stateId: ${stateId}`);
     }
 
     return serialize(comps.map((c: any) => ({
@@ -202,17 +216,71 @@ export async function getCitizenComplaints(stateId?: string) {
 export async function submitComplaint(complaintData: Record<string, unknown>) {
     await connectToDatabase();
     const data = await Complaint.create(complaintData);
+    
+    // Notify Government Officers in the same state
+    try {
+        const village = await Village.findById(complaintData.village_id).populate('district_id');
+        if (village && village.district_id && village.district_id.state_id) {
+            const stateId = village.district_id.state_id;
+            const officers = await User.find({ role: 'government_officer', state_id: stateId });
+            
+            for (const officer of officers) {
+                await createNotification(
+                    officer._id.toString(),
+                    'system',
+                    'New Local Complaint',
+                    `A new citizen complaint has been filed in ${village.name} village.`
+                );
+            }
+            console.log(`[Complaints] Notified ${officers.length} government officers for state ${stateId}`);
+        }
+    } catch (err) {
+        console.error('Failed to send complaint notifications:', err);
+    }
+
     return serialize({ ...data.toObject(), id: data._id });
+}
+
+export async function replyToComplaint(id: string, response: string) {
+    await connectToDatabase();
+    const updated = await Complaint.findByIdAndUpdate(id, {
+        government_response: response,
+        responded_at: new Date(),
+        status: 'resolved'
+    }, { new: true }).lean() as any;
+
+    if (updated && updated.submitted_by) {
+        await createNotification(
+            updated.submitted_by.toString(),
+            'system',
+            'Government Responded',
+            `The government has replied to your complaint: "${updated.title}"`,
+            '/citizen'
+        );
+    }
+    
+    revalidatePath('/government');
+    revalidatePath('/citizen');
+    
+    return serialize({ ...updated, id: updated._id });
 }
 
 export async function getGovernmentComplaints(stateId: string) {
     await connectToDatabase();
+    console.log(`[DEBUG] getGovernmentComplaints called with stateId: "${stateId}"`);
     let comps = await Complaint.find().sort({ createdAt: -1 })
         .populate({ path: 'village_id', populate: { path: 'district_id' } })
         .populate('submitted_by')
         .lean() as any[];
 
-    comps = comps.filter(c => String((c.village_id as any)?.district_id?.state_id) === stateId);
+    if (stateId && stateId !== '') {
+        const initialCount = comps.length;
+        comps = comps.filter(c => {
+            const compStateId = String((c.village_id as any)?.district_id?.state_id || (c.village_id as any)?.state_id || '');
+            return compStateId === String(stateId);
+        });
+        console.log(`[DEBUG] Filtered from ${initialCount} to ${comps.length} complaints for stateId: ${stateId}`);
+    }
 
     return serialize(comps.map((c: any) => ({
         ...c,
@@ -237,13 +305,20 @@ export async function getPanchayatApplications() {
 
 export async function getGovernmentApplications(stateId?: string, statuses: string[] = ['submitted', 'under_review']) {
     await connectToDatabase();
+    console.log(`[DEBUG] getGovernmentApplications called with stateId: "${stateId}" and statuses:`, statuses);
+    
     let apps = await Application.find({ status: { $in: statuses } })
         .populate('scheme_id')
         .populate({ path: 'village_id', populate: { path: 'district_id' } })
         .lean() as any[];
 
-    if (stateId) {
-        apps = apps.filter(a => String((a.village_id as any)?.district_id?.state_id) === stateId);
+    if (stateId && stateId !== '') {
+        const initialCount = apps.length;
+        apps = apps.filter(a => {
+            const appStateId = String((a.village_id as any)?.district_id?.state_id || (a.village_id as any)?.state_id || '');
+            return appStateId === String(stateId);
+        });
+        console.log(`[DEBUG] Filtered from ${initialCount} to ${apps.length} apps for stateId: ${stateId}`);
     }
 
     // Documents
@@ -375,6 +450,20 @@ export async function getAuditLogs() {
         id: l._id,
         user: l.user_id?.full_name || 'System',
         timestamp: l.createdAt
+    })));
+}
+
+export async function getAllUsers() {
+    await connectToDatabase();
+    const users = await User.find()
+        .populate('village_id')
+        .sort({ createdAt: -1 })
+        .lean() as any[];
+
+    return serialize(users.map(u => ({
+        ...u,
+        id: u._id,
+        village: u.village_id?.name || null
     })));
 }
 

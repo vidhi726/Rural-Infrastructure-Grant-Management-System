@@ -32,7 +32,7 @@ import AppLayout from '@/components/layout/AppLayout'
 import GlassCard from '@/components/ui/GlassCard'
 import Button from '@/components/ui/Button'
 import CategoryChart from '@/components/dashboard/CategoryChart'
-import { getGrantSchemes, createGrantScheme, getUserProfile, getAdminStats, getAuditLogs, getCategoryStats, getAdminApprovedApplications, releaseFundInstallment } from '@/lib/db/actions'
+import { getGrantSchemes, createGrantScheme, getUserProfile, getAdminStats, getAuditLogs, getCategoryStats, getAdminApprovedApplications, releaseFundInstallment, getAllUsers } from '@/lib/db/actions'
 // Removed Supabase import
 import { AnimatePresence } from 'framer-motion'
 import { useEffect } from 'react'
@@ -113,6 +113,8 @@ export default function AdminDashboard() {
     const [stats, setStats] = useState<any>(null)
     const [logs, setLogs] = useState<any[]>([])
     const [catStats, setCatStats] = useState<any[]>([])
+    const [users, setUsers] = useState<any[]>([])
+    const [loadingUsers, setLoadingUsers] = useState(false)
 
     // Disbursements State
     const [approvedApps, setApprovedApps] = useState<any[]>([])
@@ -149,16 +151,18 @@ export default function AdminDashboard() {
                     setProfile(profileData)
                 }
 
-                const [adminStats, auditLogsData, categoryStatsData, approvedAppsData] = await Promise.all([
+                const [adminStats, auditLogsData, categoryStatsData, approvedAppsData, allUsersData] = await Promise.all([
                     getAdminStats(),
                     getAuditLogs(),
                     getCategoryStats(),
-                    getAdminApprovedApplications()
+                    getAdminApprovedApplications(),
+                    getAllUsers()
                 ])
                 setStats(adminStats)
                 setLogs(auditLogsData)
                 setCatStats(categoryStatsData)
                 setApprovedApps(approvedAppsData)
+                setUsers(allUsersData)
             } catch (err) {
                 console.error('Error fetching admin data:', err)
             } finally {
@@ -177,6 +181,13 @@ export default function AdminDashboard() {
         const data = await getGrantSchemes(false)
         setSchemes(data)
         setLoadingSchemes(false)
+    }
+
+    const fetchUsers = async () => {
+        setLoadingUsers(true)
+        const data = await getAllUsers()
+        setUsers(data)
+        setLoadingUsers(false)
     }
 
     const fetchApprovedApps = async () => {
@@ -290,9 +301,7 @@ export default function AdminDashboard() {
         { id: 'overview', label: 'Overview', icon: Home },
         { id: 'users', label: 'User Management', icon: Users },
         { id: 'schemes', label: 'Grant Schemes', icon: FileText },
-        { id: 'disbursements', label: 'Fund Disbursements', icon: IndianRupee },
-        { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-        { id: 'audit', label: 'Audit Logs', icon: History }
+        { id: 'disbursements', label: 'Fund Disbursements', icon: IndianRupee }
     ]
 
     return (
@@ -323,9 +332,6 @@ export default function AdminDashboard() {
                             <div className="flex items-center gap-4">
                                 <Button variant="secondary" icon={<Download className="w-4 h-4" />}>
                                     Export Data
-                                </Button>
-                                <Button variant="primary" icon={<Plus className="w-4 h-4" />}>
-                                    Add User
                                 </Button>
                             </div>
                         </div>
@@ -484,15 +490,19 @@ export default function AdminDashboard() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {recentUsers.map((user) => {
-                                        const roleConfig = roleColors[user.role]
+                                    {(loadingUsers ? [] : users.filter(user =>
+                                        user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                        user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                        user.role?.toLowerCase().includes(searchQuery.toLowerCase())
+                                    )).map((user) => {
+                                        const roleConfig = roleColors[user.role] || roleColors.citizen
                                         const RoleIcon = roleConfig.icon
 
                                         return (
                                             <tr key={user.id} className="border-b border-[var(--card-border)] hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                                                 <td className="py-4 px-4">
                                                     <div>
-                                                        <div className="font-medium">{user.name}</div>
+                                                        <div className="font-medium">{user.full_name || user.email.split('@')[0]}</div>
                                                         <div className="text-sm text-[var(--text-muted)]">{user.email}</div>
                                                     </div>
                                                 </td>
@@ -506,12 +516,12 @@ export default function AdminDashboard() {
                                                     {user.village || '-'}
                                                 </td>
                                                 <td className="py-4 px-4">
-                                                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${user.status === 'active'
+                                                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${user.is_active !== false
                                                         ? 'bg-green-500/20 text-green-400'
                                                         : 'bg-amber-500/20 text-amber-400'
                                                         }`}>
-                                                        {user.status === 'active' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
-                                                        {user.status}
+                                                        {user.is_active !== false ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                                                        {user.is_active !== false ? 'active' : 'inactive'}
                                                     </span>
                                                 </td>
                                                 <td className="py-4 px-4">
@@ -763,7 +773,7 @@ export default function AdminDashboard() {
                     <div className="space-y-6">
                         <GlassCard className="p-6">
                             <h3 className="text-xl font-bold mb-6">Approved Grants & Fund Releases</h3>
-                            
+
                             {approvedApps.length === 0 ? (
                                 <div className="text-center py-12 text-[var(--text-muted)]">
                                     <IndianRupee className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -774,7 +784,7 @@ export default function AdminDashboard() {
                                     {approvedApps.map((app) => {
                                         const remaining = app.approvedAmount - app.totalReleasedAmount;
                                         const progress = app.approvedAmount > 0 ? (app.totalReleasedAmount / app.approvedAmount) * 100 : 0;
-                                        
+
                                         return (
                                             <div key={app.id} className="p-6 rounded-2xl bg-black/5 dark:bg-white/5 border border-[var(--card-border)] hover:bg-black/10 dark:hover:bg-white/10 transition-all">
                                                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
@@ -806,14 +816,14 @@ export default function AdminDashboard() {
                                                                 <div className="font-bold text-amber-500">₹{remaining.toLocaleString('en-IN')}</div>
                                                             </div>
                                                         </div>
-                                                        
+
                                                         <div className="mt-4">
                                                             <div className="flex justify-between text-xs mb-1">
                                                                 <span className="text-[var(--text-muted)]">Fund Release Progress</span>
                                                                 <span className="font-medium">{progress.toFixed(0)}%</span>
                                                             </div>
                                                             <div className="h-2 w-full bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
-                                                                <motion.div 
+                                                                <motion.div
                                                                     initial={{ width: 0 }}
                                                                     animate={{ width: `${progress}%` }}
                                                                     className="h-full bg-gradient-to-r from-green-400 to-green-500"
@@ -823,8 +833,8 @@ export default function AdminDashboard() {
                                                     </div>
 
                                                     <div className="flex flex-col gap-3 min-w-[200px]">
-                                                        <Button 
-                                                            variant="primary" 
+                                                        <Button
+                                                            variant="primary"
                                                             icon={<IndianRupee className="w-4 h-4" />}
                                                             onClick={() => {
                                                                 setSelectedApp(app)
@@ -836,7 +846,7 @@ export default function AdminDashboard() {
                                                         >
                                                             {remaining <= 0 ? 'Fully Disbursed' : 'Release Funds'}
                                                         </Button>
-                                                        
+
                                                         {app.installments && app.installments.length > 0 && (
                                                             <div className="mt-2">
                                                                 <div className="text-xs font-semibold text-[var(--text-muted)] mb-2 uppercase tracking-wider">Installments History</div>
@@ -885,7 +895,7 @@ export default function AdminDashboard() {
                                             <X className="w-5 h-5 text-[var(--text-muted)]" />
                                         </button>
                                     </div>
-                                    
+
                                     <div className="mb-6 p-4 rounded-xl bg-black/5 dark:bg-white/5 border border-[var(--card-border)]">
                                         <div className="text-sm font-medium mb-1">{selectedApp.title}</div>
                                         <div className="flex justify-between text-sm mb-1 mt-3">
@@ -955,63 +965,6 @@ export default function AdminDashboard() {
                     )}
                 </AnimatePresence>
 
-                {/* Analytics */}
-                {activeTab === 'analytics' && (
-                    <GlassCard className="p-6">
-                        <h3 className="text-xl font-bold mb-6">System Analytics</h3>
-                        <div className="text-center py-12 text-[var(--text-muted)]">
-                            <BarChart3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                            <p>Advanced analytics dashboard</p>
-                            <p className="text-sm">View trends, performance metrics, and generate reports</p>
-                        </div>
-                    </GlassCard>
-                )}
-
-                {/* Audit Logs */}
-                {activeTab === 'audit' && (
-                    <GlassCard className="p-6">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="text-xl font-bold">Audit Logs</h3>
-                            <Button variant="secondary" size="sm" icon={<Download className="w-4 h-4" />}>
-                                Export Logs
-                            </Button>
-                        </div>
-
-                        <div className="space-y-4">
-                            {logs.length === 0 ? (
-                                <div className="text-center py-12 text-[var(--text-muted)]">No logs found.</div>
-                            ) : (
-                                logs.map((log, index) => (
-                                    <motion.div
-                                        key={log.id}
-                                        initial={{ opacity: 0, x: -20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        transition={{ delay: index * 0.05 }}
-                                        className="flex items-start gap-4 p-4 rounded-xl bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-                                    >
-                                        <div className={`p-2 rounded-lg bg-black/5 dark:bg-white/5`}>
-                                            <History className={`w-5 h-5 ${actionColors[log.action] || 'text-[var(--text-muted)]'}`} />
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <span className={`font-medium ${actionColors[log.action] || 'text-gray-400'}`}>
-                                                    {log.action.replace(/_/g, ' ')}
-                                                </span>
-                                            </div>
-                                            <p className="text-sm text-[var(--text-muted)]">
-                                                <span className="text-[var(--text-main)]">{log.user}</span> on{' '}
-                                                <span className="text-blue-400">{log.entity_type} {log.entity_id}</span>
-                                            </p>
-                                        </div>
-                                        <div className="text-sm text-[var(--text-muted)]">
-                                            {new Date(log.timestamp).toLocaleString('en-IN')}
-                                        </div>
-                                    </motion.div>
-                                ))
-                            )}
-                        </div>
-                    </GlassCard>
-                )}
             </div>
         </AppLayout>
     )

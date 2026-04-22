@@ -20,7 +20,8 @@ import {
     Send,
     Upload,
     ChevronRight,
-    Building2
+    Building2,
+    Shield
 } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import { useEffect } from 'react'
@@ -82,14 +83,15 @@ export default function CitizenDashboard() {
 
                 const profileData = await getUserProfile(user._id || user.id)
                 if (!profileData) return
-                const stateId = profileData.state_id
+                const stateId = typeof profileData.state_id === 'object' ? profileData.state_id._id : (profileData.state_id || '');
+                const userId = user._id || user.id;
                 const villageId = profileData.village?.id || profileData.village_id;
                 
-                console.log('[DEBUG] Citizen Profile Village ID:', villageId);
+                console.log('[DEBUG] Citizen Profile:', { villageId, stateId, userId });
 
                 const [apps, complaints] = await Promise.all([
                     getCitizenApplications(stateId, String(villageId)),
-                    getCitizenComplaints(stateId)
+                    getCitizenComplaints(stateId, userId)
                 ])
 
                 setProfile(profileData)
@@ -116,8 +118,11 @@ export default function CitizenDashboard() {
                 setMyComplaints(complaints.map((c: any) => ({
                     id: c.id,
                     title: c.title,
+                    description: c.description,
                     status: c.status,
-                    date: c.created_at
+                    date: c.created_at,
+                    response: c.government_response,
+                    respondedAt: c.responded_at
                 })))
 
                 if (apps.length > 0) {
@@ -154,7 +159,7 @@ export default function CitizenDashboard() {
                 complaint_number: complaintNumber,
                 title: newComplaint.title,
                 description: newComplaint.description,
-                village_id: profile?.village_id,
+                village_id: profile?.village?.id || profile?.village_id,
                 submitted_by: profile?.id,
                 status: 'open',
                 priority: 3
@@ -164,12 +169,18 @@ export default function CitizenDashboard() {
             setNewComplaint({ title: '', description: '' })
 
             // Refresh complaints list
-            const updatedComplaints = await getCitizenComplaints(profile?.state_id)
+            const updatedComplaints = await getCitizenComplaints(
+                typeof profile?.state_id === 'object' ? profile.state_id._id : profile?.state_id, 
+                profile?.id
+            )
             setMyComplaints(updatedComplaints.map((c: any) => ({
                 id: c.id,
                 title: c.title,
+                description: c.description,
                 status: c.status,
-                date: c.created_at
+                date: c.created_at,
+                response: c.government_response,
+                respondedAt: c.responded_at
             })))
         } catch (err) {
             console.error('Submission error:', err)
@@ -430,9 +441,26 @@ export default function CitizenDashboard() {
                                                     {complaint.status.replace('_', ' ')}
                                                 </span>
                                             </div>
-                                            <p className="text-sm text-[var(--text-muted)]">
+                                            <p className="text-sm text-[var(--text-muted)] mb-3">
                                                 Submitted on {new Date(complaint.date).toLocaleDateString('en-IN')}
                                             </p>
+                                            
+                                            {complaint.response && (
+                                                <div className="mt-4 p-4 rounded-xl bg-blue-500/5 border border-blue-500/10">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <div className="w-6 h-6 rounded-lg bg-blue-500 flex items-center justify-center">
+                                                            <Shield className="w-3.5 h-3.5 text-white" />
+                                                        </div>
+                                                        <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">Government Response</span>
+                                                    </div>
+                                                    <p className="text-sm text-[var(--text-main)] opacity-90 leading-relaxed italic">
+                                                        "{complaint.response}"
+                                                    </p>
+                                                    <div className="text-[10px] text-[var(--text-muted)] mt-2 text-right uppercase">
+                                                        Replied on {new Date(complaint.respondedAt).toLocaleDateString('en-IN')}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     )
                                 })}

@@ -27,7 +27,6 @@ const mainLinks = [
 const roleLinks: Record<string, any[]> = {
     citizen: [
         { href: '/citizen', label: 'My Portal', icon: UserCircle, color: 'text-blue-500' },
-        { href: '/citizen/ongoing-grants', label: 'My Grants', icon: FileText, color: 'text-sky-500' },
         { href: '/projects', label: 'View Schemes', icon: Search, color: 'text-indigo-500' },
     ],
     panchayat_officer: [
@@ -36,12 +35,10 @@ const roleLinks: Record<string, any[]> = {
     ],
     government_officer: [
         { href: '/government', label: 'Officer Console', icon: Shield, color: 'text-amber-500' },
-        { href: '/villages', label: 'Jurisdictions', icon: Building2, color: 'text-orange-500' },
         { href: '/projects', label: 'Grant Management', icon: FileText, color: 'text-yellow-500' },
     ],
     admin: [
         { href: '/admin', label: 'Admin Control', icon: Settings, color: 'text-purple-500' },
-        { href: '/villages', label: 'System Villages', icon: Building2, color: 'text-pink-500' },
         { href: '/projects', label: 'Scheme Config', icon: FileText, color: 'text-violet-500' },
     ]
 }

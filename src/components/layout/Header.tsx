@@ -28,17 +28,10 @@ const navLinks = [
     { href: '/about', label: 'About', icon: Users },
 ]
 
-const roleLinks = [
-    { href: '/citizen', label: 'Citizen Portal', icon: UserCircle, color: 'text-blue-600' },
-    { href: '/panchayat', label: 'Panchayat Officer', icon: Landmark, color: 'text-emerald-600' },
-    { href: '/government', label: 'Government Officer', icon: Shield, color: 'text-sky-600' },
-    { href: '/admin', label: 'Admin Panel', icon: Settings, color: 'text-purple-600' },
-]
 
 export default function Header() {
     const [isScrolled, setIsScrolled] = useState(false)
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-    const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false)
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
     const [user, setUser] = useState<any>(null)
     const pathname = usePathname()
@@ -135,43 +128,6 @@ export default function Header() {
                     <div className="hidden lg:flex items-center gap-4">
                         {user ? (
                             <div className="flex items-center gap-3">
-                                <div className="relative">
-                                    <button
-                                        onClick={() => setIsRoleMenuOpen(!isRoleMenuOpen)}
-                                        className={`
-                                            flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all
-                                            ${isScrolled ? 'text-slate-600 hover:bg-slate-50' : 'text-slate-700 hover:bg-white/10'}
-                                        `}
-                                    >
-                                        Portals
-                                        <ChevronDown className={`w-4 h-4 transition-transform ${isRoleMenuOpen ? 'rotate-180' : ''}`} />
-                                    </button>
-
-                                    <AnimatePresence>
-                                        {isRoleMenuOpen && (
-                                            <motion.div
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                exit={{ opacity: 0, y: 10 }}
-                                                className="absolute right-0 mt-2 w-56 p-1.5 bg-white rounded-2xl shadow-2xl border border-slate-100"
-                                            >
-                                                {roleLinks.map((link) => (
-                                                    <Link
-                                                        key={link.href}
-                                                        href={link.href}
-                                                        onClick={() => setIsRoleMenuOpen(false)}
-                                                        className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-sky-600 transition-all group"
-                                                    >
-                                                        <div className={`p-2 rounded-lg bg-slate-50 scale-90 group-hover:scale-100 transition-transform ${link.color}`}>
-                                                            <link.icon className="w-4 h-4" />
-                                                        </div>
-                                                        {link.label}
-                                                    </Link>
-                                                ))}
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
-                                </div>
 
                                 <div className="relative">
                                     <button
@@ -251,20 +207,6 @@ export default function Header() {
                                     {link.label}
                                 </Link>
                             ))}
-                            <div className="pt-4 pb-2 border-t border-slate-50">
-                                <p className="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Portals</p>
-                                {roleLinks.map((link) => (
-                                    <Link
-                                        key={link.href}
-                                        href={link.href}
-                                        onClick={() => setIsMobileMenuOpen(false)}
-                                        className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium text-slate-600 hover:text-sky-600 hover:bg-slate-50 transition-all"
-                                    >
-                                        <link.icon className={`w-5 h-5 ${link.color}`} />
-                                        {link.label}
-                                    </Link>
-                                ))}
-                            </div>
                             <div className="pt-4">
                                 {user ? (
                                     <button

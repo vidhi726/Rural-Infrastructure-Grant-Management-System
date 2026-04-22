@@ -13,6 +13,8 @@ const complaintSchema = new mongoose.Schema({
     assigned_to: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     resolution_notes: { type: String },
     resolved_at: { type: Date },
+    government_response: { type: String },
+    responded_at: { type: Date },
     evidence_photos: { type: [Object], default: [] },
     geo_location: { type: Object },
 }, { timestamps: true });

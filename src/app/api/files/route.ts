@@ -16,11 +16,11 @@ export async function GET(request: NextRequest) {
         let query = {};
         
         // Panchayat users only see their own files
-        if (session.role === 'panchayat') {
-            query = { uploaded_by: session.userId };
+        if (session.role === 'panchayat' || session.role === 'panchayat_officer') {
+            query = { uploaded_by: session.id };
         } 
         // Government and Admin can see all files
-        else if (session.role === 'government' || session.role === 'admin') {
+        else if (session.role === 'government' || session.role === 'government_officer' || session.role === 'admin') {
             query = {}; 
         } else {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

@@ -26,7 +26,7 @@ export async function GET(
 
         // Access Control
         // Panchayat can only see their own files
-        if (session.role === 'panchayat' && String(doc.uploaded_by) !== session.userId) {
+        if ((session.role === 'panchayat' || session.role === 'panchayat_officer') && String(doc.uploaded_by) !== session.id) {
             return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
         }
         // Government and Admin can see all files

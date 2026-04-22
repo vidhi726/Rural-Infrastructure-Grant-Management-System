@@ -26,17 +26,35 @@ import GlassCard from '@/components/ui/GlassCard'
 import Button from '@/components/ui/Button'
 import ProgressRing from '@/components/ui/ProgressRing'
 import DynamicMilestones from '@/components/ui/DynamicMilestones'
-import { 
-    getPanchayatApplications, 
-    getGrantSchemes, 
-    submitApplication, 
-    uploadDocument, 
-    getApplicationDocuments, 
+import {
+    getPanchayatApplications,
+    getGrantSchemes,
+    submitApplication,
+    uploadDocument,
+    getApplicationDocuments,
     getMilestones,
-    getUserProfile 
+    getUserProfile
 } from '@/lib/db/actions'
 import AppLayout from '@/components/layout/AppLayout'
 import { toast } from 'react-hot-toast'
+import { Info, BookOpen } from 'lucide-react'
+
+const DOCUMENT_DESCRIPTIONS: Record<string, string> = {
+    "Project Proposal": "A comprehensive document detailing the project's goals, methodology, and timeline.",
+    "Land NOC / Documents": "Proof of land ownership or a No Objection Certificate from the relevant authority.",
+    "Environmental Clearance": "Official certification that the project complies with environmental regulations.",
+    "Technical Survey Report": "A professional analysis of the project site and technical feasibility.",
+    "Technical Plan": "Detailed engineering drawings and project specifications.",
+    "Water Quality Report": "Analysis of water sources to ensure safety and quality standards (for water projects).",
+    "Population Certificate": "Proof of the beneficiary population size from the census or local records.",
+    "School Registration": "Valid registration documents for educational infrastructure projects.",
+    "Infrastructure Assessment": "A formal evaluation of existing infrastructure and necessary improvements.",
+    "Equipment List": "A detailed inventory of machinery or tools required for the project.",
+    "Building Plan": "Architectural blueprints for any construction work.",
+    "Budget Estimate": "An itemized list of all expected costs and financial requirements.",
+    "Geotagged Photos": "Photographs of the project site with embedded GPS coordinates for verification.",
+    "Utility Board NOC": "Permission from utility providers (electricity, water, etc.) for project implementation."
+};
 
 export default function PanchayatDashboard() {
     const [activeTab, setActiveTab] = useState('overview')
@@ -53,7 +71,7 @@ export default function PanchayatDashboard() {
     const [submitSuccess, setSubmitSuccess] = useState(false)
     const [user, setUser] = useState<any>(null)
     const [grantSchemes, setGrantSchemes] = useState<any[]>([])
-    
+
     // New State for Filtering and Details
     const [filterStatus, setFilterStatus] = useState<string>('all')
     const [selectedApp, setSelectedApp] = useState<any>(null)
@@ -63,7 +81,7 @@ export default function PanchayatDashboard() {
     const [appMilestones, setAppMilestones] = useState<any[]>([])
     const [uploadedFiles, setUploadedFiles] = useState<any[]>([])
     const [uploadingFile, setUploadingFile] = useState(false)
-    
+
     const router = useRouter()
 
     const currentScheme = grantSchemes.find(s => s.id === selectedScheme)
@@ -76,9 +94,9 @@ export default function PanchayatDashboard() {
                 // Get current user session
                 const meRes = await fetch('/api/auth/me')
                 const { user: sessionUser } = await meRes.json()
-                
+
                 if (sessionUser) {
-                    const profile = await getUserProfile(sessionUser.id)
+                    const profile = await getUserProfile(sessionUser._id || sessionUser.id)
                     setUser({ ...sessionUser, ...profile })
                 }
 
@@ -88,7 +106,7 @@ export default function PanchayatDashboard() {
                     getGrantSchemes(),
                     fetch('/api/files')
                 ])
-                
+
                 setGrantSchemes(schemes)
                 setMyApplications(apps.map((a: any) => ({
                     id: a.id,
@@ -167,10 +185,16 @@ export default function PanchayatDashboard() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        
+
         if (!user || (!user.id && !user._id)) {
             console.log('Submission failed: User object is null or missing ID', user)
             alert('You must be logged in to submit an application. Please refresh and try again.')
+            return
+        }
+
+        const effectiveVillageId = user.village?.id || user.village_id;
+        if (!effectiveVillageId) {
+            alert('Error: Your profile is missing a Village assignment. Please refresh the page and try again. If the issue persists, contact an administrator.');
             return
         }
 
@@ -181,7 +205,7 @@ export default function PanchayatDashboard() {
 
         const currentScheme = grantSchemes.find(s => s.id === selectedScheme)
         const requiredDocs = currentScheme?.required_documents || []
-        
+
         // Check if all required documents are selected
         const missingDocs = requiredDocs.filter((doc: string) => !selectedFiles[doc])
         if (missingDocs.length > 0) {
@@ -191,7 +215,7 @@ export default function PanchayatDashboard() {
 
         setSubmitting(true)
         const payload = {
-            village_id: user.id || user._id,
+            village_id: effectiveVillageId,
             scheme_id: selectedScheme,
             submitted_by: user.id || user._id,
             title: formData.title,
@@ -212,12 +236,12 @@ export default function PanchayatDashboard() {
                 for (const [docType, file] of filesToUpload) {
                     if (!file) continue
                     console.log(`Uploading ${docType}:`, file.name)
-                    
+
                     const docFormData = new FormData()
                     docFormData.append('file', file)
                     docFormData.append('applicationId', newApp.id)
                     docFormData.append('documentType', docType)
-                    
+
                     const uploadRes = await fetch('/api/files/upload', {
                         method: 'POST',
                         body: docFormData
@@ -227,7 +251,7 @@ export default function PanchayatDashboard() {
                         const errorData = await uploadRes.json()
                         throw new Error(`Upload failed for ${docType}: ${errorData.error || uploadRes.statusText}`)
                     }
-                    
+
                     console.log(`Finished uploading ${docType}`)
                 }
             }
@@ -254,7 +278,7 @@ export default function PanchayatDashboard() {
                 progress: a.completion_percentage,
                 rejectionReason: a.rejection_reason
             })))
-            
+
             setTimeout(() => setSubmitSuccess(false), 8000)
         } catch (err: any) {
             console.error('Submission failed:', err)
@@ -404,13 +428,13 @@ export default function PanchayatDashboard() {
                                             <div className={`p-3 rounded-xl ${statusInfo.bg}`}>
                                                 <StatusIcon className={`w-5 h-5 ${statusInfo.text}`} />
                                             </div>
-                                             <div className="flex-1">
-                                                 <h4 className="font-medium text-[var(--text-main)]">{app.title}</h4>
-                                                 <p className="text-sm text-[var(--text-muted)]">{app.applicationNumber}</p>
-                                             </div>
+                                            <div className="flex-1">
+                                                <h4 className="font-medium text-[var(--text-main)]">{app.title}</h4>
+                                                <p className="text-sm text-[var(--text-muted)]">{app.applicationNumber}</p>
+                                            </div>
                                             <div className="text-right">
                                                 <div className={`text-sm font-medium ${statusInfo.text}`}>{statusInfo.label}</div>
-                                                 <div className="text-sm text-[var(--text-muted)]">₹{((app.amount || 0) / 100000).toFixed(1)}L</div>
+                                                <div className="text-sm text-[var(--text-muted)]">₹{((app.amount || 0) / 100000).toFixed(1)}L</div>
                                             </div>
                                         </div>
                                     )
@@ -446,25 +470,25 @@ export default function PanchayatDashboard() {
                                                         </span>
                                                         <span className="text-sm text-gray-500">{app.applicationNumber}</span>
                                                     </div>
-                                                     <h3 className="text-lg font-semibold text-[var(--text-main)] mb-2">{app.title}</h3>
-                                                     <p className="text-[var(--text-muted)] text-sm mb-3">{app.scheme}</p>
+                                                    <h3 className="text-lg font-semibold text-[var(--text-main)] mb-2">{app.title}</h3>
+                                                    <p className="text-[var(--text-muted)] text-sm mb-3">{app.scheme}</p>
 
-                                                     <div className="flex items-center gap-6 text-sm text-[var(--text-muted)]">
+                                                    <div className="flex items-center gap-6 text-sm text-[var(--text-muted)]">
                                                         <span className="flex items-center gap-1">
                                                             <IndianRupee className="w-4 h-4" />
                                                             ₹{((app.amount || 0) / 100000).toFixed(1)}L
                                                         </span>
-                                                         <span>Submitted: {new Date(app.submittedDate).toLocaleDateString('en-IN')}</span>
-                                                     </div>
+                                                        <span>Submitted: {new Date(app.submittedDate).toLocaleDateString('en-IN')}</span>
+                                                    </div>
                                                 </div>
 
                                                 <div className="flex items-center gap-4">
                                                     <div className="shrink-0 flex items-center justify-center">
-                                                        <ProgressRing 
-                                                            progress={fundProgress} 
-                                                            size={80} 
-                                                            strokeWidth={6} 
-                                                            color={fundProgress >= 100 ? "#22c55e" : "#4ade80"} 
+                                                        <ProgressRing
+                                                            progress={fundProgress}
+                                                            size={80}
+                                                            strokeWidth={6}
+                                                            color={fundProgress >= 100 ? "#22c55e" : "#4ade80"}
                                                         />
                                                     </div>
                                                     <Button variant="secondary" size="sm" onClick={() => handleViewDetails(app)}>
@@ -480,9 +504,82 @@ export default function PanchayatDashboard() {
                 )}
 
                 {activeTab === 'documents' && (
-                    <div className="space-y-6">
-                        <GlassCard className="p-8">
-                            <h2 className="text-2xl font-bold mb-6">Project Documents</h2>
+                    <div className="space-y-8">
+                        {/* Grant Schemes Library Section */}
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                                    <BookOpen className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-bold text-[var(--text-main)]">Grant Information Library</h2>
+                                    <p className="text-sm text-[var(--text-muted)]">Complete guide to available schemes and their required documentation.</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-6">
+                                {grantSchemes.map((scheme) => (
+                                    <GlassCard key={scheme.id} className="p-6 border-l-4 border-l-blue-500">
+                                        <div className="flex flex-col md:flex-row gap-6">
+                                            <div className="flex-1">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <h3 className="text-xl font-bold text-[var(--text-main)]">{scheme.name}</h3>
+                                                    <span className="px-3 py-1 rounded-full bg-blue-500/10 text-blue-400 text-sm font-semibold">
+                                                        Max: ₹{(scheme.max_amount / 100000).toFixed(1)}L
+                                                    </span>
+                                                </div>
+                                                <p className="text-[var(--text-muted)] mb-6 leading-relaxed bg-black/10 dark:bg-white/5 p-4 rounded-xl border border-[var(--card-border)]">
+                                                    {scheme.description || "No description available for this scheme."}
+                                                </p>
+
+                                                <div className="space-y-4">
+                                                    <h4 className="font-bold flex items-center gap-2 text-sm uppercase tracking-wider text-[var(--text-muted)]">
+                                                        <FileText className="w-4 h-4" /> Required Documents & Instructions
+                                                    </h4>
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        {scheme.required_documents?.map((doc: string) => (
+                                                            <div key={doc} className="p-4 rounded-xl bg-black/5 dark:bg-white/5 border border-[var(--card-border)] group hover:border-blue-500/30 transition-all">
+                                                                <div className="flex items-start gap-3">
+                                                                    <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 mt-1 shrink-0">
+                                                                        <Info className="w-3 h-3" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <div className="font-semibold text-sm text-[var(--text-main)] mb-1">{doc}</div>
+                                                                        <p className="text-xs text-[var(--text-muted)] leading-normal">
+                                                                            {DOCUMENT_DESCRIPTIONS[doc] || "Mandatory document for technical and financial validation of the proposed project."}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                        {(!scheme.required_documents || scheme.required_documents.length === 0) && (
+                                                            <div className="text-sm text-green-500 italic p-4 bg-green-500/5 rounded-xl border border-green-500/20">
+                                                                No additional documents are required for this scheme.
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </GlassCard>
+                                ))}
+                            </div>
+                        </div>
+
+                        <hr className="border-[var(--card-border)] my-12" />
+
+                        {/* Project Documents Section */}
+                        <div className="space-y-6">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 rounded-lg bg-green-500/10 text-green-400">
+                                    <FileCheck className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h2 className="text-2xl font-bold text-[var(--text-main)]">My Project Evidence</h2>
+                                    <p className="text-sm text-[var(--text-muted)]">Archives of all documents uploaded for submitted applications.</p>
+                                </div>
+                            </div>
+
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {uploadedFiles.length > 0 ? (
                                     uploadedFiles.map((file) => (
@@ -493,11 +590,11 @@ export default function PanchayatDashboard() {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="font-medium truncate text-[var(--text-main)]">{file.file_name}</p>
-                                                    <p className="text-xs text-[var(--text-muted)] capitalize">{file.document_type.replace('_', ' ')}</p>
+                                                    <p className="text-xs text-[var(--text-muted)] capitalize">{file.document_type?.replace('_', ' ') || 'Document'}</p>
                                                 </div>
-                                                <a 
-                                                    href={`/api/files/${file.id}`} 
-                                                    target="_blank" 
+                                                <a
+                                                    href={`/api/files/${file.id}`}
+                                                    target="_blank"
                                                     rel="noopener noreferrer"
                                                     className="p-2 rounded-lg bg-white/5 text-gray-400 hover:text-white"
                                                 >
@@ -508,11 +605,12 @@ export default function PanchayatDashboard() {
                                     ))
                                 ) : (
                                     <div className="col-span-full py-12 text-center bg-black/5 dark:bg-white/5 rounded-2xl border border-dashed border-gray-600">
-                                        <p className="text-gray-400">No documents found.</p>
+                                        <p className="text-gray-400 font-medium">No project documents uploaded yet.</p>
+                                        <p className="text-xs text-[var(--text-muted)] mt-1">Uploaded proof will automatically appear here.</p>
                                     </div>
                                 )}
                             </div>
-                        </GlassCard>
+                        </div>
                     </div>
                 )}
 
@@ -532,7 +630,7 @@ export default function PanchayatDashboard() {
                             <h2 className="text-2xl font-bold text-[var(--text-main)]">New Grant Application</h2>
                             <p className="text-[var(--text-muted)]">Fill in the details below to submit a new grant application for your village.</p>
                         </div>
-                        
+
                         <form onSubmit={handleSubmit} className="space-y-8">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
@@ -606,46 +704,46 @@ export default function PanchayatDashboard() {
                                             <p className="text-sm text-green-500">No additional documents are required for this scheme.</p>
                                         )}
                                     </div>
-                                    
+
                                     {requiredDocs.length > 0 && (
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {requiredDocs.map((docType) => (
-                                            <div key={docType} className="p-4 rounded-2xl bg-[var(--bg-main)] border border-[var(--card-border)] space-y-3">
-                                                <div className="flex items-center justify-between">
-                                                    <span className="text-sm font-medium text-[var(--text-main)]">{docType}</span>
-                                                    {selectedFiles[docType] && (
-                                                        <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                                    )}
-                                                </div>
-                                                
-                                                <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-[var(--card-border)] rounded-xl cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
-                                                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                                        <Upload className={`w-6 h-6 mb-2 ${selectedFiles[docType] ? 'text-green-500' : 'text-[var(--text-muted)] group-hover:text-[var(--accent-primary)]'}`} />
-                                                        <p className="text-xs text-[var(--text-muted)] truncate max-w-[150px]">
-                                                            {selectedFiles[docType] ? selectedFiles[docType]?.name : 'Click to upload PDF/JPG'}
-                                                        </p>
+                                            {requiredDocs.map((docType) => (
+                                                <div key={docType} className="p-4 rounded-2xl bg-[var(--bg-main)] border border-[var(--card-border)] space-y-3">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-sm font-medium text-[var(--text-main)]">{docType}</span>
+                                                        {selectedFiles[docType] && (
+                                                            <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                                        )}
                                                     </div>
-                                                    <input 
-                                                        type="file" 
-                                                        className="hidden" 
-                                                        onChange={(e) => {
-                                                            const file = e.target.files?.[0] || null
-                                                            setSelectedFiles(prev => ({ ...prev, [docType]: file }))
-                                                        }}
-                                                        accept=".pdf,.jpg,.jpeg,.png"
-                                                    />
-                                                </label>
-                                            </div>
-                                        ))}
+
+                                                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-[var(--card-border)] rounded-xl cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 transition-colors group">
+                                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                                            <Upload className={`w-6 h-6 mb-2 ${selectedFiles[docType] ? 'text-green-500' : 'text-[var(--text-muted)] group-hover:text-[var(--accent-primary)]'}`} />
+                                                            <p className="text-xs text-[var(--text-muted)] truncate max-w-[150px]">
+                                                                {selectedFiles[docType] ? selectedFiles[docType]?.name : 'Click to upload PDF/JPG'}
+                                                            </p>
+                                                        </div>
+                                                        <input
+                                                            type="file"
+                                                            className="hidden"
+                                                            onChange={(e) => {
+                                                                const file = e.target.files?.[0] || null
+                                                                setSelectedFiles(prev => ({ ...prev, [docType]: file }))
+                                                            }}
+                                                            accept=".pdf,.jpg,.jpeg,.png"
+                                                        />
+                                                    </label>
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
                                 </div>
                             )}
 
                             <div className="flex justify-end pt-4">
-                                <Button 
-                                    type="submit" 
-                                    variant="primary" 
+                                <Button
+                                    type="submit"
+                                    variant="primary"
                                     size="lg"
                                     loading={submitting}
                                     icon={<Send className="w-5 h-5" />}
@@ -702,7 +800,7 @@ export default function PanchayatDashboard() {
                                             <span className="font-bold text-green-400">{((selectedApp.amountReceived / selectedApp.approvedAmount) * 100).toFixed(0)}%</span>
                                         </div>
                                         <div className="h-2.5 w-full bg-black/40 rounded-full overflow-hidden">
-                                            <motion.div 
+                                            <motion.div
                                                 initial={{ width: 0 }}
                                                 animate={{ width: `${(selectedApp.amountReceived / selectedApp.approvedAmount) * 100}%` }}
                                                 className="h-full bg-gradient-to-r from-green-500 to-green-400"
@@ -749,9 +847,9 @@ export default function PanchayatDashboard() {
                                             <label className="flex items-center gap-2 px-4 py-2 bg-green-500/10 text-green-400 rounded-xl cursor-pointer hover:bg-green-500/20 w-fit">
                                                 <Upload className="w-4 h-4" />
                                                 Upload Evidence
-                                                <input 
-                                                    type="file" 
-                                                    className="hidden" 
+                                                <input
+                                                    type="file"
+                                                    className="hidden"
                                                     onChange={(e) => handleFileUpload(e, selectedApp.id)}
                                                     disabled={uploadingFile}
                                                 />
@@ -759,7 +857,7 @@ export default function PanchayatDashboard() {
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div className="mt-8">
                                     <DynamicMilestones milestones={appMilestones} />
                                 </div>
